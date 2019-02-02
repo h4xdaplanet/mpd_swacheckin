@@ -2,7 +2,7 @@
 """Southwest Checkin.
 
 Usage:
-  checkin.py CONFIRMATION_NUMBER FIRST_NAME LAST_NAME [--email=<email_addr> | --mobile=<phone_num>] [-v | --verbose]
+  checkin.py CONFIRMATION_NUMBER FIRST_NAME LAST_NAME USER_ID TEAM_ID [--email=<email_addr> | --mobile=<phone_num>] [-v | --verbose]
   checkin.py (-h | --help)
   checkin.py --version
 
@@ -25,6 +25,9 @@ import requests
 import sys
 import time
 import json
+import bot
+pyBot = bot.Bot()
+slack = pyBot.client
 
 API_KEY = 'l7xxb3dcccc4a5674bada48fc6fcf0946bc8'
 USER_EXPERIENCE_KEY = 'AAAA3198-4545-46F4-9A05-BB3E868BEFF5'
@@ -71,7 +74,7 @@ def get_checkin_data(number, first, last):
     data = safe_request(url)
     return data['checkInViewReservationPage']
 
-def checkin(number, first, last):
+def checkin(number, first, last, slack_id):
     data = get_checkin_data(number, first, last)
     info_needed = data['_links']['checkIn']
     url = "{}mobile-air-operations{}".format(BASE_URL, info_needed['href'])
@@ -93,7 +96,7 @@ def send_notification(checkindata, emailaddr=None, mobilenum=None):
     print("Attempting to send boarding pass...")
     safe_request(url, info_needed['body'])
 
-def schedule_checkin(flight_time, number, first, last, email, mobile):
+def schedule_checkin(flight_time, number, first, last, user_id, team_id, mobile, email):
     checkin_time = flight_time - timedelta(days=1)
     current_time = datetime.now(pytz.utc).astimezone(get_localzone())
     # check to see if we need to sleep until 24 hours before flight
@@ -104,6 +107,7 @@ def schedule_checkin(flight_time, number, first, last, email, mobile):
         m, s = divmod(delta, 60)
         h, m = divmod(m, 60)
         print("Too early to check in.  Waiting {} hours, {} minutes, {} seconds".format(trunc(h), trunc(m), s))
+        pyBot.checkin_response(team_id, user_id, "Too early to check in.  Waiting {} hours, {} minutes, {} seconds".format(trunc(h), trunc(m), s))
         time.sleep(delta)
     data = checkin(number, first, last)
     for flight in data['flights']:
@@ -115,7 +119,7 @@ def schedule_checkin(flight_time, number, first, last, email, mobile):
         send_notification(data, mobilenum=mobile)
 
 
-def auto_checkin(reservation_number, first_name, last_name, email=None, mobile=None):
+def auto_checkin(reservation_number, first_name, last_name, user_id, team_id, email=None, mobile=None):
     body = lookup_existing_reservation(reservation_number, first_name, last_name)
 
     # Get our local current time
@@ -139,16 +143,19 @@ def auto_checkin(reservation_number, first_name, last_name, email=None, mobile=N
         if date > now:
             # found a flight for checkin!
             print("Flight information found, departing {} at {}".format(airport, date.strftime('%b %d %I:%M%p')))
-            schedule_checkin(date, reservation_number, first_name, last_name, email, mobile)
+            pyBot.checkin_response(team_id, user_id, "Flight information found, departing {} at {}".format(airport, date.strftime('%b %d %I:%M%p')))
+            schedule_checkin(date, reservation_number, first_name, last_name, user_id, team_id, email, mobile)
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='Southwest Checkin 0.2')
-
+    print(arguments)
     # work work
     reservation_number = arguments['CONFIRMATION_NUMBER']
     first_name = arguments['FIRST_NAME']
     last_name = arguments['LAST_NAME']
+    user_id = arguments['USER_ID']
+    team_id = arguments['TEAM_ID']
     email = arguments['--email']
     mobile = arguments['--mobile']
 
-    auto_checkin(reservation_number, first_name, last_name, email, mobile)
+    auto_checkin(reservation_number, first_name, last_name, user_id, team_id, email, mobile)

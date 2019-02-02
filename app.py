@@ -33,7 +33,7 @@ def _event_handler(event_type, slack_event):
     # ================ Bot DM Events =============== #
     # When the user DMs the bot, send them the checkin instructions unless they got the syntax right
 
-    if event_type == "message" and slack_event["event"]["channel_type"]  == "im":
+    if event_type == "message" and slack_event["event"]["channel_type"] == "im":
         user_id = slack_event["event"]["user"]
 
         if "checkin" in slack_event["event"]["text"]:
@@ -43,7 +43,7 @@ def _event_handler(event_type, slack_event):
                     pyBot.checkin_initial(team_id, user_id, msg_split[1], msg_split[2], msg_split[3])
                     return make_response("Confirming checkin", 200, )
             except:
-                pyBot.checkin_instructions(team_id, user_id)
+                #pyBot.checkin_instructions(team_id, user_id)
                 return make_response("Checkin Instructions Sent", 200, )
         else:
         # Send the checkin instructions

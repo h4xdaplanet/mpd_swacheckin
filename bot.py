@@ -2,11 +2,11 @@
 """
 Python Slack Bot class for use with the pythOnBoarding app
 """
-
+import os
 import message
 import key
 from slackclient import SlackClient
-
+import subprocess
 # To remember which teams have authorized your app and what tokens are
 # associated with each team, we can store this information in memory on
 # as a global object. When your bot is out of development, it's best to
@@ -54,7 +54,7 @@ class Bot(object):
         dm_id : str
             id of the DM channel opened by this method
         """
-        r = self.client.api_call('auth.test')
+
         new_dm = self.client.api_call("im.open",
                                       user=user_id)
         dm_id = new_dm["channel"]["id"]
@@ -163,6 +163,14 @@ class Bot(object):
         # has completed an onboarding task.
         message_obj.timestamp = timestamp
 
+    def pass_checkin(self, conf_number, firstname, lastname, user_id, team_id):
+        # TODO: Pass variables to checkin.py
+        # TODO: Store checkins and associate to user id so user can ask what are scheduled
+        print('Running pass_checkin')
+        print("Checkin {} {} {} for {} on team {}".format(conf_number, firstname, lastname, user_id, team_id))
+        #TODO Use subprocess instead of os.system
+        #subprocess.call(['python', 'checkin.py', '%s %s %s %s %s']) % (conf_number, firstname, lastname, user_id, team_id)
+        os.system("python checkin.py {} {} {} {} {}".format(conf_number, firstname, lastname, user_id, team_id))
     def checkin_initial(self, team_id, user_id, conf_number, firstname, lastname):
         """
         Create and send an onboarding welcome message to new users. Save the
@@ -209,15 +217,66 @@ class Bot(object):
                                             "* on confirmation number *" + conf_number + "*",
                                             #attachments=message_obj.attachments
                                             )
-        self.pass_checkin(conf_number,firstname,lastname,self.open_dm(user_id))
+        print('Sending ' + conf_number, firstname, lastname, user_id, team_id)
+        self.pass_checkin(conf_number, firstname, lastname, user_id, team_id)
         timestamp = post_message["ts"]
         # We'll save the timestamp of the message we've just posted on the
         # message object which we'll use to update the message after a user
         # has completed an onboarding task.
         message_obj.timestamp = timestamp
-    def pass_checkin (self, conf_number, firstname, lastname, slack_id):
-        # TODO: Pass variables to checkin.py
-        print('Checkin %s %s %s for %s %s' %conf_number %firstname %lastname %slack_id)
+
+    def checkin_response(self, team_id, user_id, message_text):
+        #TODO clean up all this
+        """
+        Creating response ability for checkin.py
+        Parameters
+        ----------
+        team_id : str
+            id of the Slack team associated with the incoming event
+        user_id : str
+            id of the Slack user associated with the incoming event
+        message_text : str
+            text for bot to respond with
+        """
+        # We've imported a Message class from `message.py` that we can use
+        # to create message objects for each onboarding message we send to a
+        # user. We can use these objects to keep track of the progress each
+        # user on each team has made getting through our onboarding tutorial.
+
+        # First, we'll check to see if there's already messages our bot knows
+        # of for the team id we've got.
+        if self.messages.get(team_id):
+            # Then we'll update the message dictionary with a key for the
+            # user id we've recieved and a value of a new message object
+            self.messages[team_id].update({user_id: message.Message()})
+        else:
+            # If there aren't any message for that team, we'll add a dictionary
+            # of messages for that team id on our Bot's messages attribute
+            # and we'll add the first message object to the dictionary with
+            # the user's id as a key for easy access later.
+            self.messages[team_id] = {user_id: message.Message()}
+        message_obj = self.messages[team_id][user_id]
+        # Then we'll set that message object's channel attribute to the DM
+        # of the user we'll communicate with
+        message_obj.channel = self.open_dm(user_id)
+        # We'll use the message object's method to create the attachments that
+        # we'll want to add to our Slack message. This method will also save
+        # the attachments on the message object which we're accessing in the
+        # API call below through the message object's `attachments` attribute.
+
+        post_message = self.client.api_call("chat.postMessage",
+                                            channel=message_obj.channel,
+                                            username=self.name,
+                                            #icon_emoji=self.emoji,
+                                            text=message_text,
+                                            #attachments=message_obj.attachments
+                                            )
+
+        timestamp = post_message["ts"]
+        # We'll save the timestamp of the message we've just posted on the
+        # message object which we'll use to update the message after a user
+        # has completed an onboarding task.
+        message_obj.timestamp = timestamp
     def update_emoji(self, team_id, user_id):
         """
         Update onboarding welcome message after recieving a "reaction_added"
