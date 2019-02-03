@@ -1,3 +1,5 @@
+slackclient
+flask
 datetime
 docopts
 pytest
