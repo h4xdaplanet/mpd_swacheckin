@@ -74,11 +74,12 @@ def get_checkin_data(number, first, last):
     data = safe_request(url)
     return data['checkInViewReservationPage']
 
-def checkin(number, first, last, slack_id):
+def checkin(number, first, last, team_id, user_id):
     data = get_checkin_data(number, first, last)
     info_needed = data['_links']['checkIn']
     url = "{}mobile-air-operations{}".format(BASE_URL, info_needed['href'])
     print("Attempting check-in...")
+    pyBot.checkin_response(team_id, user_id,"Attempting check-in...")
     return safe_request(url, info_needed['body'])['checkInConfirmationPage']
 
 def send_notification(checkindata, emailaddr=None, mobilenum=None):
@@ -113,6 +114,7 @@ def schedule_checkin(flight_time, number, first, last, user_id, team_id, mobile,
     for flight in data['flights']:
         for doc in flight['passengers']:
             print("{} got {}{}!".format(doc['name'], doc['boardingGroup'], doc['boardingPosition']))
+            pyBot.checkin_response(team_id, user_id, "{} got {}{}!".format(doc['name'], doc['boardingGroup'], doc['boardingPosition']))
     if email:
         send_notification(data, emailaddr=email)
     elif mobile:
