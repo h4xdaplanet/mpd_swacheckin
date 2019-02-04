@@ -52,6 +52,9 @@ def safe_request(url, body=None):
                 r = requests.get(url, headers=headers)
             data = r.json()
             if 'httpStatusCode' in data and data['httpStatusCode'] in ['NOT_FOUND', 'BAD_REQUEST', 'FORBIDDEN']:
+                if 'message' in data and 'Reservation could not be retrieved' in data['message']:
+                    pyBot.checkin_response(team_id, user_id, "Cannot find res")
+                    sys.exit("Cant find res")
                 attempts += 1
                 print(data['message'])
                 if attempts > MAX_ATTEMPTS:
