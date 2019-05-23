@@ -41,14 +41,14 @@ def _event_handler(event_type, slack_event):
                 msg_split = slack_event["event"]["text"].split()
                 if "checkin" in msg_split[0] and len(msg_split[1]) == 6:
                     pyBot.checkin_initial(team_id, user_id, msg_split[1], msg_split[2], msg_split[3])
-                    return make_response("Confirming checkin", 200, )
+                    return print('Checkin done')
             except:
                 #pyBot.checkin_instructions(team_id, user_id)
-                return make_response("Checkin Instructions Sent", 200, )
+                return print("Checkin Instructions Sent")
         else:
         # Send the checkin instructions
             pyBot.checkin_instructions(team_id, user_id)
-            return make_response("Checkin Instructions Sent", 200, )
+            return print("checkin instructions sent")
 
     # ============== Share Message Events ============= #
     # If the user has shared the onboarding message, the event type will be
@@ -153,7 +153,7 @@ def hears():
         t = Thread(target=_event_handler,args=(event_type,slack_event))
         t.start()
         #return _event_handler(event_type, slack_event)
-        make_response("got it", 200, )
+        return make_response("got it", 200, )
     # If our bot hears things that are not events we've subscribed to,
     # send a quirky but helpful error response
 
@@ -162,4 +162,4 @@ def hears():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0',port='24609',debug=True)

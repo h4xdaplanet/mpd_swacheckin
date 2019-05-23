@@ -26,25 +26,42 @@ import sys
 import time
 import json
 import bot
+import uuid
 pyBot = bot.Bot()
 slack = pyBot.client
 
-API_KEY = 'l7xxb3dcccc4a5674bada48fc6fcf0946bc8'
-USER_EXPERIENCE_KEY = 'AAAA3198-4545-46F4-9A05-BB3E868BEFF5'
+#API_KEY = 'l7xxb3dcccc4a5674bada48fc6fcf0946bc8'
+#USER_EXPERIENCE_KEY = 'AAAA3198-4545-46F4-9A05-BB3E868BEFF5'
 BASE_URL = 'https://mobile.southwest.com/api/'
 CHECKIN_EARLY_SECONDS = 5
 CHECKIN_INTERVAL_SECONDS = 0.25
 MAX_ATTEMPTS = 40
 
 # Pulled from proxying the Southwest iOS App
-headers = {'Host': 'mobile.southwest.com', 'Content-Type': 'application/json', 'X-API-Key': API_KEY, 'X-User-Experience-Id': USER_EXPERIENCE_KEY, 'Accept': '*/*'}
+#headers = {'Host': 'mobile.southwest.com', 'Content-Type': 'application/json', 'X-API-Key': API_KEY, 'X-User-Experience-Id': USER_EXPERIENCE_KEY, 'Accept': '*/*'}
+
+def generate_headers():
+    config_js = requests.get('https://mobile.southwest.com/js/config.js')
+    if config_js.status_code == requests.codes.ok:
+            modded = config_js.text[config_js.text.index("API_KEY"):]
+            API_KEY = modded[modded.index(':') + 1:modded.index(',')].strip('"')
+    else:
+        print("Couldn't get API_KEY")
+        sys.exit(1)
+
+    USER_EXPERIENCE_KEY = str(uuid.uuid1()).upper()
+    # Pulled from proxying the Southwest iOS App
+    return {'Host': 'mobile.southwest.com', 'Content-Type': 'application/json', 'X-API-Key': API_KEY, 'X-User-Experience-Id': USER_EXPERIENCE_KEY, 'Accept': '*/*'}
+
 
 # You might ask yourself, "Why the hell does this exist?"
 # Basically, there sometimes appears a "hiccup" in Southwest where things
 # aren't exactly available 24-hours before, so we try a few times
+
 def safe_request(url, body=None):
     try:
         attempts = 0
+        headers = generate_headers()
         while True:
             if body is not None:
                 r = requests.post(url, headers=headers, json=body)
@@ -77,7 +94,7 @@ def get_checkin_data(number, first, last):
     data = safe_request(url)
     return data['checkInViewReservationPage']
 
-def checkin(number, first, last, team_id, user_id):
+def checkin(number, first, last):
     data = get_checkin_data(number, first, last)
     info_needed = data['_links']['checkIn']
     url = "{}mobile-air-operations{}".format(BASE_URL, info_needed['href'])

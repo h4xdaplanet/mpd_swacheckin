@@ -170,7 +170,7 @@ class Bot(object):
         print("Checkin {} {} {} for {} on team {}".format(conf_number, firstname, lastname, user_id, team_id))
         #TODO Use subprocess instead of os.system
         #subprocess.call(['python', 'checkin.py', '%s %s %s %s %s']) % (conf_number, firstname, lastname, user_id, team_id)
-        os.system("python checkin.py {} {} {} {} {}".format(conf_number, firstname, lastname, user_id, team_id))
+        os.system("python3 checkin.py {} {} {} {} {}".format(conf_number, firstname, lastname, user_id, team_id))
     def checkin_initial(self, team_id, user_id, conf_number, firstname, lastname):
         """
         Create and send an onboarding welcome message to new users. Save the
